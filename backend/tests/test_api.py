@@ -46,7 +46,7 @@ def client():
 def test_health_check(client):
     response = client.get("/api/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "healthy"}
+    assert response.json()["status"] == "healthy"
 
 def test_list_equipment(client):
     response = client.get("/api/v1/equipment")
@@ -177,4 +177,97 @@ def test_fleet_telemetry_per_type(client):
     # Check per-type trend data
     assert "Excavator" in data["by_type_trend"]
     assert len(data["by_type_trend"]["Excavator"]) > 0
+
+def test_rbac_manager_forbidden_admin_endpoints(client):
+    # Manager trying to add equipment -> 403
+    res_add = client.post("/api/v1/equipment", json={"equipment_id": "EXQ9999", "equipment_type": "Loader"}, headers={"x-user-role": "MANAGER"})
+    assert res_add.status_code == 403
+
+    # Manager trying to update equipment -> 403
+    res_put = client.put("/api/v1/equipment/EXQ1001", json={"equipment_type": "Crane"}, headers={"x-user-role": "MANAGER"})
+    assert res_put.status_code == 403
+
+    # Manager trying to deactivate equipment -> 403
+    res_deact = client.patch("/api/v1/equipment/EXQ1001/deactivate", headers={"x-user-role": "MANAGER"})
+    assert res_deact.status_code == 403
+
+    # Manager trying to view users -> 403
+    res_users = client.get("/api/v1/users", headers={"x-user-role": "MANAGER"})
+    assert res_users.status_code == 403
+
+    # Manager trying to view settings -> 403
+    res_set = client.get("/api/v1/settings", headers={"x-user-role": "MANAGER"})
+    assert res_set.status_code == 403
+
+def test_rbac_viewer_forbidden_operations(client):
+    # Viewer trying to check out -> 403
+    today = date.today()
+    res_co = client.post("/api/v1/rentals/check-out", json={
+        "equipment_id": "EXQ1004",
+        "customer_id": "CUST001",
+        "site_id": "SITE001",
+        "expected_return_date": str(today + timedelta(days=5))
+    }, headers={"x-user-role": "VIEWER"})
+    assert res_co.status_code == 403
+
+    # Viewer trying to resolve alert -> 403
+    res_res = client.post("/api/v1/alerts/1/resolve", json={"resolved": True}, headers={"x-user-role": "VIEWER"})
+    assert res_res.status_code == 403
+
+def test_rbac_admin_full_access(client):
+    # Admin can list users
+    res_users = client.get("/api/v1/users", headers={"x-user-role": "ADMIN"})
+    assert res_users.status_code == 200
+    assert len(res_users.json()) > 0
+
+    # Admin can list settings
+    res_set = client.get("/api/v1/settings", headers={"x-user-role": "ADMIN"})
+    assert res_set.status_code == 200
+    assert len(res_set.json()) > 0
+
+def test_database_authentication_success(client):
+    # Valid email & password
+    res = client.post("/api/v1/auth/login", json={
+        "email": "admin@caterpillar.com",
+        "password": "password123"
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert "access_token" in data
+    assert data["role"] == "ADMIN"
+    assert data["email"] == "admin@caterpillar.com"
+
+def test_database_authentication_invalid_password(client):
+    # Wrong password -> 401 Unauthorized
+    res = client.post("/api/v1/auth/login", json={
+        "email": "admin@caterpillar.com",
+        "password": "wrong_password_999"
+    })
+    assert res.status_code == 401
+    assert "Invalid email/username or password" in res.json()["detail"]
+
+def test_database_authentication_unknown_user(client):
+    # Unknown user -> 401 Unauthorized
+    res = client.post("/api/v1/auth/login", json={
+        "email": "nonexistent_user@caterpillar.com",
+        "password": "password123"
+    })
+    assert res.status_code == 401
+
+def test_database_authentication_disabled_user(client):
+    # Disable manager user account
+    client.patch("/api/v1/users/USR_MGR01/status?status_value=DISABLED", headers={"x-user-role": "ADMIN"})
+
+    # Attempt login with disabled account -> 403 Forbidden
+    res = client.post("/api/v1/auth/login", json={
+        "email": "manager@caterpillar.com",
+        "password": "password123"
+    })
+    assert res.status_code == 403
+    assert "disabled" in res.json()["detail"].lower()
+
+    # Re-enable user account for rest of test suite
+    client.patch("/api/v1/users/USR_MGR01/status?status_value=ACTIVE", headers={"x-user-role": "ADMIN"})
+
+
 

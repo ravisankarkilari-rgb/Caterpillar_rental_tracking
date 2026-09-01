@@ -4,10 +4,11 @@ from collections import defaultdict
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from backend.models import Equipment, UsageLog, Alert, RentalRecord, EquipmentStatus, EquipmentType
-from backend.services.equipment_service import get_equipment_with_metrics
+from backend.services.equipment_service import get_equipment_with_metrics, get_all_equipment_metrics
 
 def get_dashboard_summary(db: Session) -> Dict[str, Any]:
     equipments = db.query(Equipment).all()
+    metrics_map = get_all_equipment_metrics(equipments, db)
     
     total = len(equipments)
     rented_count = 0
@@ -20,7 +21,7 @@ def get_dashboard_summary(db: Session) -> Dict[str, Any]:
     total_idle_hours_all = 0.0
     
     for equip in equipments:
-        data = get_equipment_with_metrics(equip, db)
+        data = get_equipment_with_metrics(equip, db, precalculated_metrics=metrics_map.get(equip.equipment_id))
         derived_status = data["status"]
         
         if derived_status == EquipmentStatus.AVAILABLE.value:
@@ -66,13 +67,15 @@ def get_dashboard_summary(db: Session) -> Dict[str, Any]:
 
 def get_fleet_metrics(db: Session) -> Dict[str, Any]:
     equipments = db.query(Equipment).all()
+    metrics_map = get_all_equipment_metrics(equipments, db)
     
     by_type = defaultdict(lambda: {"total": 0, "rented": 0, "available": 0, "avg_utilization": 0.0, "_utils": []})
     by_status = defaultdict(int)
     util_dist = {"low": 0, "moderate": 0, "high": 0}  # <30%, 30-70%, >70%
     
     for equip in equipments:
-        data = get_equipment_with_metrics(equip, db)
+        data = get_equipment_with_metrics(equip, db, precalculated_metrics=metrics_map.get(equip.equipment_id))
+
         t = equip.equipment_type
         s = data["status"]
         u = data["utilization_percentage"]

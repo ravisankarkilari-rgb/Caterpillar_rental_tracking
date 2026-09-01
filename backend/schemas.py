@@ -32,6 +32,7 @@ class EquipmentResponse(BaseModel):
     rental_start_date: Optional[dt_date] = None
     expected_return_date: Optional[dt_date] = None
     ignition_status: str = "OFF"
+    is_active: bool = True
     created_at: dt_datetime
     updated_at: dt_datetime
 
@@ -122,6 +123,10 @@ class AlertResolveRequest(BaseModel):
     resolved: bool = True
 
 # ==================== Entities Schemas ====================
+class CustomerCreate(BaseModel):
+    customer_id: str = Field(..., description="Unique Customer ID (e.g. CUST007)")
+    display_name: str = Field(..., description="Customer display name")
+
 class CustomerResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -129,12 +134,19 @@ class CustomerResponse(BaseModel):
     customer_id: str
     display_name: str
 
+class SiteCreate(BaseModel):
+    site_id: str = Field(..., description="Unique Site ID (e.g. SITE009)")
+    display_name: str = Field(..., description="Site display name")
+
 class SiteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     site_id: str
     display_name: str
+
+class OperatorCreate(BaseModel):
+    operator_id: str = Field(..., description="Unique Operator ID (e.g. OP116)")
 
 class OperatorResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -177,4 +189,63 @@ class FleetMetricsResponse(BaseModel):
     by_type_trend: Optional[Dict[str, List[Dict[str, Any]]]] = {}
     type_telemetry: Optional[Dict[str, Dict[str, Any]]] = {}
     multi_type_comparison: Optional[List[Dict[str, Any]]] = []
+
+# ==================== User Schemas ====================
+class UserCreate(BaseModel):
+    user_id: str = Field(..., description="Unique User ID (e.g. USR_MGR02)")
+    username: str = Field(..., description="Username (e.g. jdoe)")
+    email: str = Field(..., description="Email address")
+    password: Optional[str] = Field("password123", description="Initial user password")
+    role: str = Field("MANAGER", description="User Role: ADMIN, MANAGER, or VIEWER")
+
+class UserUpdate(BaseModel):
+    role: Optional[str] = None
+    status: Optional[str] = None
+
+class UserResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: str
+    username: str
+    email: str
+    role: str
+    status: str
+    created_at: dt_datetime
+    updated_at: dt_datetime
+
+# ==================== Auth Schemas ====================
+class LoginRequest(BaseModel):
+    email: str = Field(..., description="User email address or username")
+    password: str = Field(..., description="User password")
+
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    username: str
+    email: str
+    role: str
+    status: str
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., description="Current account password")
+    new_password: str = Field(..., description="New account password")
+
+class ResetPasswordRequest(BaseModel):
+    new_password: str = Field(..., description="New password for target user account")
+
+# ==================== System Setting Schemas ====================
+class SystemSettingUpdate(BaseModel):
+    value: str
+
+class SystemSettingResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    key: str
+    value: str
+    description: Optional[str] = None
+    updated_at: dt_datetime
+
 

@@ -7,6 +7,8 @@ from backend.models import Alert, Equipment
 from backend.schemas import AlertResponse, AlertResolveRequest
 from backend.services.alert_service import sync_all_alerts
 
+from backend.services.rbac import require_role
+
 router = APIRouter(prefix="/api/v1/alerts", tags=["Alerts"])
 
 @router.get("", response_model=List[AlertResponse])
@@ -17,9 +19,6 @@ def list_alerts(
     equipment_id: Optional[str] = Query(None, description="Filter by equipment ID"),
     db: Session = Depends(get_db)
 ):
-    # Dynamic sync to ensure newly overdue / underutilized machines are flagged
-    sync_all_alerts(db)
-
     query = db.query(Alert)
 
     if resolved is not None:
@@ -33,14 +32,16 @@ def list_alerts(
 
     alerts = query.order_by(Alert.created_at.desc()).all()
     
-    # Enrich with equipment type
+    # Bulk map equipment_type to prevent N+1 queries
+    equipments = db.query(Equipment.equipment_id, Equipment.equipment_type).all()
+    eq_type_map = {e.equipment_id: e.equipment_type for e in equipments}
+
     results = []
     for a in alerts:
-        eq = db.query(Equipment).filter(Equipment.equipment_id == a.equipment_id).first()
         results.append({
             "id": a.id,
             "equipment_id": a.equipment_id,
-            "equipment_type": eq.equipment_type if eq else None,
+            "equipment_type": eq_type_map.get(a.equipment_id),
             "alert_type": a.alert_type,
             "severity": a.severity,
             "message": a.message,
@@ -52,7 +53,8 @@ def list_alerts(
 
     return results
 
-@router.post("/{alert_id}/resolve", response_model=AlertResponse)
+
+@router.post("/{alert_id}/resolve", response_model=AlertResponse, dependencies=[Depends(require_role(["ADMIN", "MANAGER"]))])
 def resolve_alert(
     alert_id: int,
     payload: AlertResolveRequest = AlertResolveRequest(resolved=True),

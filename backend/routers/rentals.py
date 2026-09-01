@@ -6,9 +6,11 @@ from backend.schemas import CheckOutRequest, CheckInRequest, EquipmentResponse, 
 from backend.services.rental_service import checkout_equipment, checkin_equipment, get_rental_history
 from backend.services.equipment_service import get_equipment_with_metrics
 
+from backend.services.rbac import require_role
+
 router = APIRouter(prefix="/api/v1/rentals", tags=["Rentals"])
 
-@router.post("/check-out", response_model=EquipmentResponse)
+@router.post("/check-out", response_model=EquipmentResponse, dependencies=[Depends(require_role(["ADMIN", "MANAGER"]))])
 def handle_check_out(payload: CheckOutRequest, db: Session = Depends(get_db)):
     """
     Checks out an available equipment unit to an anonymized customer/site/operator.
@@ -16,7 +18,7 @@ def handle_check_out(payload: CheckOutRequest, db: Session = Depends(get_db)):
     equipment = checkout_equipment(payload, db)
     return get_equipment_with_metrics(equipment, db)
 
-@router.post("/check-in", response_model=EquipmentResponse)
+@router.post("/check-in", response_model=EquipmentResponse, dependencies=[Depends(require_role(["ADMIN", "MANAGER"]))])
 def handle_check_in(payload: CheckInRequest, db: Session = Depends(get_db)):
     """
     Checks in a rented/overdue equipment unit, logging condition and resetting status to AVAILABLE.

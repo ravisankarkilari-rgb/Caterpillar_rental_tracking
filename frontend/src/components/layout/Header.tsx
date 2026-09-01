@@ -33,6 +33,26 @@ const PAGE_TITLES: Record<NavPage, { title: string; subtitle: string }> = {
     title: 'Fleet Analytics & Demand Forecasting',
     subtitle: 'Historical rental trends, utilization metrics, and predictive demand estimation',
   },
+  customers: {
+    title: 'Customer Directory',
+    subtitle: 'Enterprise customer accounts assigned to active and historical rentals',
+  },
+  sites: {
+    title: 'Project Job Sites',
+    subtitle: 'Job site locations and active fleet deployments across infrastructure projects',
+  },
+  operators: {
+    title: 'Equipment Operators',
+    subtitle: 'Certified Caterpillar equipment operator directory and assignments',
+  },
+  users: {
+    title: 'System User Management',
+    subtitle: 'Manage administrative and operational user accounts, status, and role access',
+  },
+  settings: {
+    title: 'System Configuration & Settings',
+    subtitle: 'Configure operational thresholds, telematics sync parameters, and system defaults',
+  },
 };
 
 export const Header: React.FC<HeaderProps> = ({
@@ -83,25 +103,17 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden sm:inline">Scan Tag / ID</span>
         </button>
 
-        {/* Role Selector */}
-        <div className="flex items-center bg-gray-800/80 rounded-lg p-0.5 border border-gray-700 text-xs">
-          <div className="px-2 py-1 flex items-center gap-1 text-gray-400">
-            <Shield className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden md:inline font-medium">Persona:</span>
+        {/* User Account & Official DB Role Badge */}
+        <div className="flex items-center gap-2 bg-gray-800/80 rounded-lg px-3 py-1 border border-gray-700/80 text-xs">
+          <Shield className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <div className="flex flex-col text-left leading-none">
+            <span className="text-[11px] font-bold text-gray-200 font-mono truncate max-w-[150px]">
+              {userEmail || 'admin@caterpillar.com'}
+            </span>
+            <span className="text-[9px] text-amber-400 font-extrabold uppercase tracking-wider mt-0.5">
+              {role}
+            </span>
           </div>
-          {(['ADMIN', 'MANAGER', 'VIEWER'] as UserRole[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRole(r)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all ${
-                role === r
-                  ? 'bg-amber-400 text-black shadow-sm'
-                  : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              {r}
-            </button>
-          ))}
         </div>
 
         {/* Sign Out Button */}

@@ -9,7 +9,6 @@ router = APIRouter(prefix="/api/v1/analytics", tags=["Analytics"])
 
 @router.get("/dashboard-summary", response_model=DashboardSummaryResponse)
 def get_summary(db: Session = Depends(get_db)):
-    sync_all_alerts(db)
     return get_dashboard_summary(db)
 
 @router.get("/fleet-metrics", response_model=FleetMetricsResponse)

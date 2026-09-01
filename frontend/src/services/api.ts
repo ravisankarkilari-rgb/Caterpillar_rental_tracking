@@ -11,7 +11,9 @@ import {
   FleetMetrics,
   DemandForecastResponse,
   CheckOutPayload,
-  CheckInPayload
+  CheckInPayload,
+  UserAccount,
+  SystemSetting
 } from '../types';
 
 const apiClient = axios.create({
@@ -21,10 +23,18 @@ const apiClient = axios.create({
   },
 });
 
-// Intercept requests to attach simulated role header
+// Intercept requests to attach auth token, role, and email headers
 apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('cat_auth_token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
   const storedRole = localStorage.getItem('cat_user_role') || 'MANAGER';
   config.headers['x-user-role'] = storedRole;
+  const storedEmail = localStorage.getItem('cat_auth_email');
+  if (storedEmail) {
+    config.headers['x-user-email'] = storedEmail;
+  }
   return config;
 });
 
@@ -42,6 +52,28 @@ export const getErrorMessage = (error: any): string => {
 };
 
 export const api = {
+  // Auth
+  login: async (payload: { email: string; password?: string }): Promise<{
+    access_token: string;
+    token_type: string;
+    user_id: string;
+    username: string;
+    email: string;
+    role: string;
+    status: string;
+  }> => {
+    const res = await apiClient.post('/auth/login', {
+      email: payload.email,
+      password: payload.password || ''
+    });
+    return res.data;
+  },
+
+  changePassword: async (payload: { current_password: string; new_password: string }): Promise<{ message: string }> => {
+    const res = await apiClient.post('/auth/change-password', payload);
+    return res.data;
+  },
+
   // Equipment
   getEquipmentList: async (params?: {
     search?: string;
@@ -61,6 +93,24 @@ export const api = {
 
   createEquipment: async (payload: { equipment_id: string; equipment_type: string }): Promise<Equipment> => {
     const res = await apiClient.post<Equipment>('/equipment', payload);
+    return res.data;
+  },
+
+  updateEquipment: async (id: string, payload: {
+    equipment_type?: string;
+    customer_id?: string;
+    site_id?: string;
+    operator_id?: string;
+    rental_start_date?: string;
+    expected_return_date?: string;
+    status?: string;
+  }): Promise<Equipment> => {
+    const res = await apiClient.put<Equipment>(`/equipment/${id}`, payload);
+    return res.data;
+  },
+
+  deactivateEquipment: async (id: string): Promise<Equipment> => {
+    const res = await apiClient.patch<Equipment>(`/equipment/${id}/deactivate`);
     return res.data;
   },
 
@@ -142,13 +192,79 @@ export const api = {
     return res.data;
   },
 
+  createCustomer: async (payload: { customer_id: string; display_name: string }): Promise<Customer> => {
+    const res = await apiClient.post<Customer>('/entities/customers', payload);
+    return res.data;
+  },
+
+  deleteCustomer: async (customer_id: string): Promise<void> => {
+    await apiClient.delete(`/entities/customers/${customer_id}`);
+  },
+
   getSites: async (): Promise<Site[]> => {
     const res = await apiClient.get<Site[]>('/entities/sites');
     return res.data;
   },
 
+  createSite: async (payload: { site_id: string; display_name: string }): Promise<Site> => {
+    const res = await apiClient.post<Site>('/entities/sites', payload);
+    return res.data;
+  },
+
+  deleteSite: async (site_id: string): Promise<void> => {
+    await apiClient.delete(`/entities/sites/${site_id}`);
+  },
+
   getOperators: async (): Promise<Operator[]> => {
     const res = await apiClient.get<Operator[]>('/entities/operators');
+    return res.data;
+  },
+
+  createOperator: async (payload: { operator_id: string }): Promise<Operator> => {
+    const res = await apiClient.post<Operator>('/entities/operators', payload);
+    return res.data;
+  },
+
+  deleteOperator: async (operator_id: string): Promise<void> => {
+    await apiClient.delete(`/entities/operators/${operator_id}`);
+  },
+
+  // Users (ADMIN only)
+  getUsers: async (): Promise<UserAccount[]> => {
+    const res = await apiClient.get<UserAccount[]>('/users');
+    return res.data;
+  },
+
+  createUser: async (payload: { user_id: string; username: string; email: string; role: string; password?: string }): Promise<UserAccount> => {
+    const res = await apiClient.post<UserAccount>('/users', payload);
+    return res.data;
+  },
+
+  updateUser: async (user_id: string, payload: { role?: string; status?: string }): Promise<UserAccount> => {
+    const res = await apiClient.put<UserAccount>(`/users/${user_id}`, payload);
+    return res.data;
+  },
+
+  toggleUserStatus: async (user_id: string, statusValue: 'ACTIVE' | 'DISABLED'): Promise<UserAccount> => {
+    const res = await apiClient.patch<UserAccount>(`/users/${user_id}/status`, null, {
+      params: { status_value: statusValue }
+    });
+    return res.data;
+  },
+
+  resetUserPassword: async (user_id: string, new_password: string): Promise<{ message: string }> => {
+    const res = await apiClient.post(`/users/${user_id}/reset-password`, { new_password });
+    return res.data;
+  },
+
+  // System Settings (ADMIN only)
+  getSettings: async (): Promise<SystemSetting[]> => {
+    const res = await apiClient.get<SystemSetting[]>('/settings');
+    return res.data;
+  },
+
+  updateSetting: async (key: string, value: string): Promise<SystemSetting> => {
+    const res = await apiClient.put<SystemSetting>(`/settings/${key}`, { value });
     return res.data;
   },
 };

@@ -173,3 +173,23 @@ export interface CheckInPayload {
   return_date?: string;
   condition?: string;
 }
+
+export interface UserAccount {
+  id: number;
+  user_id: string;
+  username: string;
+  email: string;
+  role: UserRole;
+  status: 'ACTIVE' | 'DISABLED';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SystemSetting {
+  id: number;
+  key: string;
+  value: string;
+  description?: string;
+  updated_at: string;
+}
+

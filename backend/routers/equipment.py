@@ -5,8 +5,10 @@ from backend.database import get_db
 from backend.models import Equipment, UsageLog, EquipmentStatus
 from datetime import datetime
 from backend.schemas import EquipmentResponse, EquipmentCreate, EquipmentUpdate, UsageLogResponse, UsageLogCreate, IgnitionControlRequest
-from backend.services.equipment_service import get_equipment_with_metrics
+from backend.services.equipment_service import get_equipment_with_metrics, get_all_equipment_metrics
 from backend.services.alert_service import sync_alerts_for_equipment
+
+from backend.services.rbac import require_role
 
 router = APIRouter(prefix="/api/v1/equipment", tags=["Equipment"])
 
@@ -29,11 +31,12 @@ def list_equipment(
         query = query.filter(Equipment.site_id == site_id)
 
     equipments = query.all()
+    metrics_map = get_all_equipment_metrics(equipments, db)
     results = []
 
     for equip in equipments:
-        item_data = get_equipment_with_metrics(equip, db)
-        
+        item_data = get_equipment_with_metrics(equip, db, precalculated_metrics=metrics_map.get(equip.equipment_id))
+
         # Apply status filter against derived status
         if status and item_data["status"].upper() != status.upper():
             continue
@@ -65,7 +68,7 @@ def get_equipment_detail(equipment_id: str, db: Session = Depends(get_db)):
         )
     return get_equipment_with_metrics(equip, db)
 
-@router.post("", response_model=EquipmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=EquipmentResponse, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_role(["ADMIN"]))])
 def create_equipment(payload: EquipmentCreate, db: Session = Depends(get_db)):
     # Check duplicate ID
     existing = db.query(Equipment).filter(Equipment.equipment_id == payload.equipment_id).first()
@@ -78,13 +81,58 @@ def create_equipment(payload: EquipmentCreate, db: Session = Depends(get_db)):
     new_equip = Equipment(
         equipment_id=payload.equipment_id.strip().upper(),
         equipment_type=payload.equipment_type,
-        status=EquipmentStatus.AVAILABLE.value
+        status=EquipmentStatus.AVAILABLE.value,
+        is_active=True
     )
     db.add(new_equip)
     db.commit()
     db.refresh(new_equip)
     
     return get_equipment_with_metrics(new_equip, db)
+
+@router.put("/{equipment_id}", response_model=EquipmentResponse, dependencies=[Depends(require_role(["ADMIN"]))])
+def update_equipment(equipment_id: str, payload: EquipmentUpdate, db: Session = Depends(get_db)):
+    equip = db.query(Equipment).filter(Equipment.equipment_id == equipment_id).first()
+    if not equip:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Equipment '{equipment_id}' was not found in fleet registry."
+        )
+    
+    if payload.equipment_type:
+        equip.equipment_type = payload.equipment_type
+    if payload.customer_id is not None:
+        equip.customer_id = payload.customer_id if payload.customer_id.strip() else None
+    if payload.site_id is not None:
+        equip.site_id = payload.site_id if payload.site_id.strip() else None
+    if payload.operator_id is not None:
+        equip.operator_id = payload.operator_id if payload.operator_id.strip() else None
+    if payload.rental_start_date is not None:
+        equip.rental_start_date = payload.rental_start_date
+    if payload.expected_return_date is not None:
+        equip.expected_return_date = payload.expected_return_date
+    if payload.status:
+        equip.status = payload.status
+
+    equip.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(equip)
+    return get_equipment_with_metrics(equip, db)
+
+@router.patch("/{equipment_id}/deactivate", response_model=EquipmentResponse, dependencies=[Depends(require_role(["ADMIN"]))])
+def deactivate_equipment(equipment_id: str, db: Session = Depends(get_db)):
+    equip = db.query(Equipment).filter(Equipment.equipment_id == equipment_id).first()
+    if not equip:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Equipment '{equipment_id}' was not found."
+        )
+    equip.is_active = False
+    equip.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(equip)
+    return get_equipment_with_metrics(equip, db)
+
 
 @router.get("/{equipment_id}/logs", response_model=List[UsageLogResponse])
 def get_equipment_usage_logs(equipment_id: str, limit: int = 30, db: Session = Depends(get_db)):

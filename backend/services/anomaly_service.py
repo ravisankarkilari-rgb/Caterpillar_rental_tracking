@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from sqlalchemy.orm import Session
 from backend.models import Equipment, UsageLog, AlertType, AlertSeverity, EquipmentStatus
 
-def detect_anomalies_for_equipment(equipment: Equipment, db: Session) -> List[Dict[str, Any]]:
+def detect_anomalies_for_equipment(equipment: Equipment, db: Session, precalculated_logs: List[UsageLog] = None) -> List[Dict[str, Any]]:
     """
     Advanced, explainable anomaly & asset misuse detection engine.
     Analyzes historical telemetry patterns to detect:
@@ -15,13 +15,16 @@ def detect_anomalies_for_equipment(equipment: Equipment, db: Session) -> List[Di
     """
     anomalies = []
     
-    logs = (
-        db.query(UsageLog)
-        .filter(UsageLog.equipment_id == equipment.equipment_id)
-        .order_by(UsageLog.date.desc())
-        .limit(14)
-        .all()
-    )
+    if precalculated_logs is not None:
+        logs = precalculated_logs[:14]
+    else:
+        logs = (
+            db.query(UsageLog)
+            .filter(UsageLog.equipment_id == equipment.equipment_id)
+            .order_by(UsageLog.date.desc())
+            .limit(14)
+            .all()
+        )
     
     # =========================================================================
     # 1. UNASSIGNED ASSET USAGE MISUSE (Ghost Usage / Unauthorized Run)

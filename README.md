@@ -100,9 +100,13 @@ The rental manager needs to instantly answer:
 └─────────────────────────────┬───────────────────────────────┘
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                 Database (SQLite / PostgreSQL)              │
+│  Database (SQLite local dev  ⇄  Supabase PostgreSQL prod)  │
+│                                                             │
 │  • equipment   • customers   • sites   • operators          │
 │  • usage_logs  • rental_records        • alerts             │
+│                                                             │
+│  🔒 Row Level Security (RLS) • Connection Pooling           │
+│  📊 Supabase Dashboard: Table Editor, SQL Editor, ER Viz    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -124,6 +128,12 @@ The rental manager needs to instantly answer:
   - Pydantic v2 (Strict request/response validation)
   - Uvicorn (ASGI server)
   - Pytest & HTTPX (Automated test suite)
+- **Database**:
+  - **Development**: SQLite (zero-config local file `rental_system.db`)
+  - **Production**: Supabase (Managed PostgreSQL 15 on AWS)
+  - Connection pooling via SQLAlchemy (pool_size=5, max_overflow=10, pool_pre_ping)
+  - Row Level Security (RLS) policies for enterprise-grade access control
+  - `python-dotenv` for environment-based database switching
 
 ---
 
@@ -171,11 +181,32 @@ npm install
 
 Create `.env` file in the root directory (or use default `.env.example`):
 ```env
+# Local Development (default)
 DATABASE_URL=sqlite:///./rental_system.db
+
+# Production — Supabase PostgreSQL (uncomment and fill in your credentials)
+# DATABASE_URL=postgresql://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
+
 PORT=8000
 HOST=127.0.0.1
 VITE_API_URL=http://localhost:8000/api/v1
 ```
+
+> 💡 See [SUPABASE_SETUP.md](SUPABASE_SETUP.md) for complete Supabase configuration instructions.
+
+---
+
+## 8.1. Supabase Cloud Database Setup
+
+To connect to a **Supabase-hosted PostgreSQL** database (recommended for panel demos):
+
+1. Create a free project at [supabase.com](https://supabase.com)
+2. Copy your **Database Connection String** (Project Settings → Database → URI)
+3. Update `.env` with your connection string
+4. Restart the backend — tables and seed data are created automatically
+
+For detailed instructions, talking points, and panel Q&A preparation, see:
+📄 **[SUPABASE_SETUP.md](SUPABASE_SETUP.md)**
 
 ---
 

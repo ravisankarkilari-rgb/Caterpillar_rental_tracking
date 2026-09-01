@@ -1,30 +1,37 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Lock, Mail, Shield, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Shield, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const [email, setEmail] = useState('admin@caterpillar.com');
-  const [password, setPassword] = useState('••••••••••••');
+  const [password, setPassword] = useState('password123');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [selectedRole, setSelectedRole] = useState<UserRole>('ADMIN');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
     setIsLoading(true);
-    setTimeout(() => {
-      login(email || 'admin@caterpillar.com', selectedRole);
+
+    try {
+      await login(email, password);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Authentication failed. Please verify email and password.');
+    } finally {
       setIsLoading(false);
-    }, 600);
+    }
   };
 
   const handleSelectQuickPersona = (role: UserRole, demoEmail: string) => {
     setSelectedRole(role);
     setEmail(demoEmail);
-    setPassword('••••••••••••');
+    setPassword('password123');
+    setErrorMessage(null);
   };
 
   return (
@@ -41,13 +48,13 @@ export const LoginPage: React.FC = () => {
         <div className="absolute inset-0 bg-radial-gradient from-transparent via-black/40 to-black/90"></div>
       </div>
 
-      {/* Top Left Step / System Indicator */}
+      {/* Top Left System Indicator */}
       <div className="absolute top-6 left-6 z-20 flex items-center gap-2.5">
         <div className="w-6 h-6 rounded-full bg-amber-400 text-black font-black text-xs flex items-center justify-center shadow-lg shadow-amber-400/20">
           1
         </div>
         <span className="text-xs font-black tracking-widest text-white uppercase drop-shadow-md">
-          Login Screen
+          Database Login
         </span>
       </div>
 
@@ -82,23 +89,31 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="pt-2">
-            <h2 className="text-sm font-bold text-gray-200">Welcome back!</h2>
-            <p className="text-xs text-gray-400">Sign in to continue</p>
+            <h2 className="text-sm font-bold text-gray-200">System Authentication</h2>
+            <p className="text-xs text-gray-400">Sign in with your enterprise credentials</p>
           </div>
         </div>
 
+        {/* Error Alert Message */}
+        {errorMessage && (
+          <div className="flex items-start gap-2.5 p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs animate-shake">
+            <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+            <div className="leading-snug">{errorMessage}</div>
+          </div>
+        )}
+
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Email Field */}
+          {/* Email / Username Field */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-300 block">Email</label>
+            <label className="text-xs font-semibold text-gray-300 block">Email or Username</label>
             <div className="relative">
               <input
-                type="email"
+                type="text"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email"
+                placeholder="Enter email or username"
                 className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all font-mono"
               />
             </div>
@@ -113,7 +128,7 @@ export const LoginPage: React.FC = () => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
+                placeholder="Enter password"
                 className="w-full pl-3.5 pr-10 py-2.5 rounded-xl bg-slate-900/90 border border-white/10 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 transition-all font-mono"
               />
               <button
@@ -127,7 +142,7 @@ export const LoginPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Remember Me & Forgot Password */}
+          {/* Remember Me & Password Hint */}
           <div className="flex items-center justify-between text-xs pt-1">
             <label className="flex items-center gap-2 cursor-pointer text-gray-300 hover:text-white">
               <input
@@ -138,16 +153,9 @@ export const LoginPage: React.FC = () => {
               />
               <span>Remember me</span>
             </label>
-            <a
-              href="#forgot"
-              onClick={(e) => {
-                e.preventDefault();
-                alert('For demo access, choose any role persona below or click Sign In directly.');
-              }}
-              className="text-gray-400 hover:text-amber-400 transition-colors font-medium"
-            >
-              Forgot password?
-            </a>
+            <span className="text-gray-500 text-[11px]">
+              Default pass: <code className="text-amber-400 font-mono">password123</code>
+            </span>
           </div>
 
           {/* Primary Sign In Button */}
@@ -164,10 +172,10 @@ export const LoginPage: React.FC = () => {
           </button>
         </form>
 
-        {/* Quick Demo Persona Selectors */}
+        {/* Quick Demo Persona Credentials Selectors */}
         <div className="pt-2 border-t border-white/10 space-y-2">
           <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block text-center">
-            Quick Persona Switch
+            Populate Demo Credentials
           </span>
           <div className="grid grid-cols-3 gap-1.5">
             <button
@@ -180,7 +188,7 @@ export const LoginPage: React.FC = () => {
               }`}
             >
               <div className="text-[11px] font-bold">Admin</div>
-              <div className="text-[9px] text-gray-500">Full Access</div>
+              <div className="text-[9px] text-gray-500">admin@caterpillar.com</div>
             </button>
 
             <button
@@ -193,7 +201,7 @@ export const LoginPage: React.FC = () => {
               }`}
             >
               <div className="text-[11px] font-bold">Manager</div>
-              <div className="text-[9px] text-gray-500">Operations</div>
+              <div className="text-[9px] text-gray-500">manager@caterpillar.com</div>
             </button>
 
             <button
@@ -206,7 +214,7 @@ export const LoginPage: React.FC = () => {
               }`}
             >
               <div className="text-[11px] font-bold">Viewer</div>
-              <div className="text-[9px] text-gray-500">Read-Only</div>
+              <div className="text-[9px] text-gray-500">viewer@caterpillar.com</div>
             </button>
           </div>
         </div>

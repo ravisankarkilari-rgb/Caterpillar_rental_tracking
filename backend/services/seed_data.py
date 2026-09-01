@@ -1,15 +1,47 @@
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
-from backend.models import Equipment, Customer, Site, Operator, UsageLog, RentalRecord, EquipmentStatus
+from backend.models import Equipment, Customer, Site, Operator, UsageLog, RentalRecord, EquipmentStatus, User, SystemSetting
 from backend.services.alert_service import sync_all_alerts
+
+from backend.services.auth_service import hash_password
 
 def seed_database(db: Session):
     """
-    Populates database with realistic, privacy-compliant enterprise equipment data.
+    Populates database with realistic, privacy-compliant enterprise equipment data and user accounts.
     """
-    # Check if already seeded
+    default_pass_hash = hash_password("password123")
+
+    # 0. Seed Users & System Settings if empty
+    if db.query(User).count() == 0:
+        demo_users = [
+            User(user_id="USR_ADMIN01", username="admin", email="admin@caterpillar.com", password_hash=default_pass_hash, role="ADMIN", status="ACTIVE"),
+            User(user_id="USR_MGR01", username="manager", email="manager@caterpillar.com", password_hash=default_pass_hash, role="MANAGER", status="ACTIVE"),
+            User(user_id="USR_VIEW01", username="viewer", email="viewer@caterpillar.com", password_hash=default_pass_hash, role="VIEWER", status="ACTIVE"),
+            User(user_id="USR_MGR02", username="operations", email="ops@caterpillar.com", password_hash=default_pass_hash, role="MANAGER", status="ACTIVE"),
+        ]
+        db.add_all(demo_users)
+    else:
+        # Ensure any existing users in DB without password_hash get populated
+        existing_users = db.query(User).filter((User.password_hash == None) | (User.password_hash == "")).all()
+        for u in existing_users:
+            u.password_hash = default_pass_hash
+
+    if db.query(SystemSetting).count() == 0:
+        demo_settings = [
+            SystemSetting(key="system_name", value="Smart Rental Tracking System", description="Enterprise fleet application title"),
+            SystemSetting(key="max_idle_threshold_pct", value="30.0", description="Threshold percentage for under-utilization alerts"),
+            SystemSetting(key="overdue_grace_period_days", value="0", description="Days grace period before marking rental overdue"),
+            SystemSetting(key="require_operator_assignment", value="true", description="Enforce operator assignment during check-out"),
+            SystemSetting(key="telemetry_sync_frequency_minutes", value="15", description="Interval for telematics data sync"),
+        ]
+        db.add_all(demo_settings)
+
+    db.commit()
+
+    # Check if equipment fleet already seeded
     if db.query(Equipment).count() > 0:
         return
+
 
     today = date.today()
 

@@ -62,6 +62,7 @@ class Equipment(Base):
     rental_start_date = Column(Date, nullable=True)
     expected_return_date = Column(Date, nullable=True)
     ignition_status = Column(String(10), default="OFF", nullable=False)  # "ON" or "OFF"
+    is_active = Column(Boolean, default=True, nullable=False)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -70,6 +71,28 @@ class Equipment(Base):
     usage_logs = relationship("UsageLog", back_populates="equipment", cascade="all, delete-orphan")
     rental_records = relationship("RentalRecord", back_populates="equipment", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="equipment", cascade="all, delete-orphan")
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(String(50), unique=True, index=True, nullable=False)
+    username = Column(String(50), unique=True, index=True, nullable=False)
+    email = Column(String(100), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=True)
+    role = Column(String(20), default="MANAGER", nullable=False)  # ADMIN, MANAGER, VIEWER
+    status = Column(String(20), default="ACTIVE", nullable=False)  # ACTIVE, DISABLED
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class SystemSetting(Base):
+    __tablename__ = "system_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(50), unique=True, index=True, nullable=False)
+    value = Column(String(255), nullable=False)
+    description = Column(String(255), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class Customer(Base):
     __tablename__ = "customers"
@@ -144,3 +167,4 @@ class Alert(Base):
     resolved_at = Column(DateTime, nullable=True)
 
     equipment = relationship("Equipment", back_populates="alerts")
+

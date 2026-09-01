@@ -6,6 +6,9 @@ import { EquipmentPage } from './pages/EquipmentPage';
 import { CheckInOutPage } from './pages/CheckInOutPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
+import { UsersPage } from './pages/UsersPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { EntitiesPage } from './pages/EntitiesPage';
 import { EquipmentDetailDrawer } from './components/modals/EquipmentDetailDrawer';
 import { QRCodeDisplayModal } from './components/common/QRCodeDisplayModal';
 import { SimulatedScannerModal } from './components/common/SimulatedScannerModal';
@@ -132,6 +135,8 @@ function AppContent() {
           {currentPage === 'equipment' && (
             <EquipmentPage
               onSelectEquipment={setSelectedEquipment}
+              onStartCheckIn={handleStartCheckIn}
+              onStartCheckOut={handleStartCheckOut}
               refreshTrigger={refreshTrigger}
             />
           )}
@@ -157,6 +162,13 @@ function AppContent() {
           {currentPage === 'analytics' && (
             <AnalyticsPage refreshTrigger={refreshTrigger} />
           )}
+
+          {currentPage === 'customers' && <EntitiesPage initialTab="customers" />}
+          {currentPage === 'sites' && <EntitiesPage initialTab="sites" />}
+          {currentPage === 'operators' && <EntitiesPage initialTab="operators" />}
+
+          {currentPage === 'users' && <UsersPage />}
+          {currentPage === 'settings' && <SettingsPage />}
         </main>
       </div>
 
