@@ -11,7 +11,6 @@ import {
   MapPin,
   HardHat,
   ShieldCheck,
-  Zap,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -87,8 +86,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       >
         {/* Brand Header */}
         <div className="p-5 border-b border-gray-800/80 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center font-black text-black text-lg tracking-wider shadow-lg shadow-amber-500/20">
-            <Zap className="w-5 h-5 fill-black" />
+          <div className="w-9 h-9 rounded-xl bg-amber-500 flex items-center justify-center font-black text-black text-sm tracking-tighter shadow-lg shadow-amber-500/20">
+            <span className="font-black text-xs text-black tracking-wider uppercase select-none font-mono">CAT</span>
           </div>
           <div>
             <div className="flex items-center gap-1.5">

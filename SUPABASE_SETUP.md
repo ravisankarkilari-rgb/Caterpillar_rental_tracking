@@ -53,7 +53,7 @@ Open the `.env` file in the project root and update:
 # DATABASE_URL=sqlite:///./rental_system.db
 
 # Uncomment and paste your Supabase connection string:
-DATABASE_URL=postgresql://postgres.abcdefghijklmnop:MySecurePassword123@aws-0-ap-south-1.pooler.supabase.com:6543/postgres
+DATABASE_URL=postgresql://postgres.[YOUR_PROJECT_REF]:[YOUR_PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres
 ```
 
 ---

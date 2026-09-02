@@ -210,6 +210,15 @@ For detailed instructions, talking points, and panel Q&A preparation, see:
 
 ---
 
+## 8.2. Project Safety & Credential Protection
+
+🔒 **Security & Privacy Best Practices**:
+- **Zero Plaintext Secrets**: Real database passwords, API tokens, and private connection strings are strictly kept out of version control. Use parameterized placeholders (`[PROJECT_REF]`, `[YOUR_PASSWORD]`) in environment configurations.
+- **`.gitignore` Enforced**: `.env` is listed in `.gitignore` to prevent accidental credential leakage to public repositories.
+- **Anonymized Fleet Telemetry**: No PII (Personally Identifiable Information) or sensitive corporate customer details are recorded or displayed.
+
+---
+
 ## 9. How to Run
 
 ### Method A: One-Click Startup (Windows)
